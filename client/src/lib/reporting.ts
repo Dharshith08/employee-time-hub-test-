@@ -142,6 +142,49 @@ export function buildStatusDistribution(records: AttendanceRecord[]) {
     }));
 }
 
+export function calculatePerformanceScore(records: AttendanceRecord[]) {
+  if (!records.length) return 0;
+
+  const totalHours = records.reduce((sum, r) => sum + (r.workingHours ?? 0), 0);
+  const activeDays = new Set(records.map(r => r.date)).size;
+  const avgHours = activeDays ? totalHours / activeDays : 0;
+  
+  // Scoring logic: 
+  // 1. Intensity (weighted against 8-hour shift): max 60 pts
+  // 2. Consistency (days present vs total period days - assuming 30 day max for score): max 40 pts
+  const intensity = Math.min(100, (avgHours / 8) * 100) * 0.6;
+  const consistency = Math.min(100, (activeDays / 22) * 100) * 0.4; // 22 working days avg
+  
+  return Number((intensity + consistency).toFixed(1));
+}
+
+export function getCurrentlyInOffice(employees: Employee[], records: AttendanceRecord[]) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const todayRecords = records.filter(r => r.date === today);
+  
+  const inOffice: Array<{ employee: Employee; lastSeen: string; status: "IN" }> = [];
+  
+  employees.forEach(employee => {
+    const empRecords = todayRecords
+      .filter(r => r.employeeId === employee.id)
+      .sort((a, b) => new Date(b.entryTime || "").getTime() - new Date(a.entryTime || "").getTime());
+    
+    if (empRecords.length > 0) {
+      const last = empRecords[0];
+      // If the latest record is just an entry (no exit yet), they are IN
+      if (last.verificationStatus === "ENTRY" && !last.exitTime) {
+        inOffice.push({
+          employee,
+          lastSeen: last.entryTime ? format(new Date(last.entryTime), "hh:mm a") : "Just now",
+          status: "IN"
+        });
+      }
+    }
+  });
+  
+  return inOffice;
+}
+
 export function buildEmployeeRows(records: AttendanceRecord[]) {
   const grouped = new Map<number, {
     employeeId: number;

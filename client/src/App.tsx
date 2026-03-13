@@ -10,10 +10,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 // Pages
 import Dashboard from "./pages/dashboard";
-import Employees from "./pages/employees";
-import Attendance from "./pages/attendance";
-import GateSimulator from "./pages/gate";
+import Employees from "@/pages/employees";
+import Attendance from "@/pages/attendance";
+import Gate from "@/pages/gate";
+import LivePage from "@/pages/live";
 import NotFound from "./pages/not-found";
+import { useEmployees } from "@/hooks/use-employees";
 
 function Router() {
   return (
@@ -21,7 +23,8 @@ function Router() {
       <Route path="/" component={Dashboard}/>
       <Route path="/employees" component={Employees}/>
       <Route path="/attendance" component={Attendance}/>
-      <Route path="/gate" component={GateSimulator}/>
+      <Route path="/gate" component={Gate} />
+      <Route path="/live" component={LivePage} />
       <Route component={NotFound} />
     </Switch>
   );

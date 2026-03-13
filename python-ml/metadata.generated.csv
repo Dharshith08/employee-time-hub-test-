@@ -1,2 +1,2 @@
 folder_name,employeeCode,name,department,rfidUid,email,phone,isActive
-"EMP-001","EMP-001","Test Employee","Verification","BBCCDDEE","","","true"
+"EMP-001","EMP-001","John Doe","Engineering","A1B2C3D4","","","true"

@@ -5,16 +5,20 @@ import {
   CalendarRange,
   Download,
   ShieldAlert,
-  TrendingUp,
-  UserCheck,
-  UserMinus,
   Users,
   Cpu,
   RefreshCw,
+  UserCheck,
+  UserMinus,
   Eye,
   Camera,
+  Zap,
+  PieChart as PieIcon
 } from "lucide-react";
 import { EmployeeProfileDialog } from "@/components/employee-profile-dialog";
+import { LiveOccupancy } from "@/components/live-occupancy";
+import { PerformanceChart } from "@/components/performance-chart";
+import { calculatePerformanceScore } from "@/lib/reporting";
 import {
   Area,
   Bar,
@@ -52,6 +56,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +206,29 @@ export default function Dashboard() {
 
   const { data: stats, isLoading, error, dataUpdatedAt: statsUpdatedAt } = useDashboardStats();
   const { data: employees } = useEmployees();
+  const { data: attendances } = useAttendances(); // Fetch all attendances for performance calculation
+
+  const topPerformers = useMemo(() => {
+    if (!employees || !attendances) return [];
+    
+    return employees.map(emp => {
+      const empRecords = attendances.filter(r => r.employeeId === emp.id);
+      return {
+        ...emp,
+        score: calculatePerformanceScore(empRecords)
+      };
+    }).sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [employees, attendances]);
+
+  const departmentData = useMemo(() => {
+    if (!employees) return [];
+    const counts: Record<string, number> = {};
+    employees.forEach(emp => {
+      counts[emp.department] = (counts[emp.department] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [employees]);
+
   const departmentOptions = useMemo(() => {
     return Array.from(new Set((employees ?? []).map((employee) => employee.department))).sort((left, right) => {
       return left.localeCompare(right);
@@ -375,6 +403,75 @@ export default function Dashboard() {
           accent="text-rose-600"
           isLoading={isLoading}
         />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Live Monitoring Section */}
+        <div className="lg:col-span-1 h-[500px]">
+           <LiveOccupancy />
+        </div>
+
+        {/* Top Performers Leaderboard */}
+        <Card className="lg:col-span-1 border-border/40 glass-card">
+          <CardHeader className="p-6 border-b border-border/40">
+             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2">
+               <Zap className="h-4 w-4 text-amber-500" />
+               Top Performers
+             </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+             <ScrollArea className="h-[400px]">
+               <div className="p-4 space-y-4">
+                 {topPerformers.map((emp, i) => (
+                   <div key={emp.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/5 border border-border/10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary border border-primary/20">
+                           {i + 1}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-foreground">{emp.name}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{emp.department}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="font-mono text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
+                         {emp.score} PTS
+                      </Badge>
+                   </div>
+                 ))}
+               </div>
+             </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Department Insights */}
+        <Card className="lg:col-span-1 border-border/40 glass-card">
+          <CardHeader className="p-6 border-b border-border/40">
+             <CardTitle className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2">
+               <PieIcon className="h-4 w-4 text-primary" />
+               Team Distribution
+             </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 flex flex-col items-center justify-center h-[400px]">
+             {/* Mock Pie Chart Visualization with radial circles */}
+             <div className="relative h-48 w-48 flex items-center justify-center mb-6">
+                <div className="absolute inset-0 rounded-full border-[12px] border-primary/20" />
+                <div className="absolute inset-2 rounded-full border-[12px] border-emerald-500/20" />
+                <div className="absolute inset-4 rounded-full border-[12px] border-amber-500/20" />
+                <div className="flex flex-col items-center">
+                   <span className="text-3xl font-black text-foreground">{employees?.length || 0}</span>
+                   <span className="text-[10px] text-muted-foreground uppercase font-black">Staff</span>
+                </div>
+             </div>
+             <div className="grid grid-cols-2 gap-4 w-full">
+                {departmentData.slice(0, 4).map((dept, i) => (
+                  <div key={dept.name} className="flex items-center gap-2">
+                     <div className={`h-2 w-2 rounded-full ${i === 0 ? 'bg-primary' : i === 1 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                     <span className="text-[11px] font-bold text-muted-foreground truncate">{dept.name} ({dept.value})</span>
+                  </div>
+                ))}
+             </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="glass-card premium-border overflow-hidden">

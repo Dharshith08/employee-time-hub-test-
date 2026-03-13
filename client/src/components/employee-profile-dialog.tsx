@@ -9,7 +9,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   Info,
-  User
+  User,
+  Zap
 } from "lucide-react";
 import {
   Dialog,
@@ -21,6 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAttendances } from "@/hooks/use-attendances";
 import { type Employee } from "@shared/schema";
+import { PerformanceChart } from "./performance-chart";
+import { calculatePerformanceScore } from "@/lib/reporting";
 
 interface EmployeeProfileDialogProps {
   employee: Employee | null;
@@ -57,6 +60,7 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
       totalHours,
       presentDays,
       avgHours: presentDays ? totalHours / presentDays : 0,
+      score: calculatePerformanceScore(relevant),
     };
   }, [attendances, employee]);
 
@@ -100,11 +104,20 @@ export function EmployeeProfileDialog({ employee, open, onOpenChange }: Employee
               <StatCard label="Avg. Daily" value={`${stats?.avgHours.toFixed(1)}h`} icon={TrendingUp} />
               <StatCard label="Present Days" value={String(stats?.presentDays || 0)} icon={CalendarDays} />
               <StatCard 
-                label="Status" 
-                value={employee.isActive ? "Active" : "Inactive"} 
-                icon={Info} 
-                accent={employee.isActive ? "text-emerald-500" : "text-rose-500"} 
+                label="Perf. Score" 
+                value={String(stats?.score ?? 0)} 
+                icon={Zap} 
+                accent={(stats?.score ?? 0) > 80 ? "text-emerald-500" : (stats?.score ?? 0) > 50 ? "text-amber-500" : "text-rose-500"} 
               />
+            </div>
+
+            {/* AI Performance Insight */}
+            <div className="glass-card rounded-2xl border border-border/40 p-6">
+               <h4 className="font-semibold text-foreground flex items-center gap-2 mb-6">
+                 <TrendingUp className="h-4 w-4 text-primary" />
+                 Productivity Trend (Last 30 Days)
+               </h4>
+               <PerformanceChart records={attendances || []} />
             </div>
 
             {/* Attendance Calendar */}
