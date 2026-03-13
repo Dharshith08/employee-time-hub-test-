@@ -61,6 +61,8 @@ interface ProcessScanInput {
   movementDirection?: MovementDirection;
   movementAxis?: MovementAxis;
   movementConfidence?: number;
+  matchConfidence?: number;
+  faceImage?: string; // Capturing the best frame
 }
 
 interface ProcessedScanResult {
@@ -80,6 +82,7 @@ interface ProcessedScanResult {
     bottom: number;
     left: number;
   } | null;
+  faceImage?: string;
 }
 
 interface NormalizedFaceProfile {
@@ -375,6 +378,7 @@ async function logGateEvent(args: {
   message: string;
   matchConfidence?: number;
   liveFaceProfile?: NormalizedFaceProfile | null;
+  faceImage?: string;
 }) {
   try {
     await storage.createGateEvent({
@@ -392,7 +396,8 @@ async function logGateEvent(args: {
       matchConfidence: args.matchConfidence,
       faceQuality: args.liveFaceProfile?.averageQuality,
       faceConsistency: args.liveFaceProfile?.consistency,
-      faceCaptureMode: args.liveFaceProfile?.captureMode,
+      faceCaptureMode: args.liveFaceProfile?.averageQuality != null ? (args.liveFaceProfile?.captureMode ?? "unknown") : undefined,
+      faceImage: args.faceImage ?? null,
     });
   } catch (error) {
     console.warn("[gate-events] Skipping raw gate event persistence:", error);
@@ -405,6 +410,7 @@ async function createFailureAttendance(
   now: Date,
   deviceId: string,
   verificationStatus: "FAILED_FACE" | "FAILED_DIRECTION",
+  faceImage?: string,
 ) {
   return storage.createAttendance({
     employeeId,
@@ -412,6 +418,7 @@ async function createFailureAttendance(
     entryTime: now,
     verificationStatus,
     deviceId,
+    faceImage: faceImage ?? null,
   });
 }
 
@@ -420,6 +427,7 @@ async function createEntryAttendance(
   date: string,
   now: Date,
   deviceId: string,
+  faceImage?: string,
 ) {
   return storage.createAttendance({
     employeeId,
@@ -427,10 +435,11 @@ async function createEntryAttendance(
     entryTime: now,
     verificationStatus: "ENTRY",
     deviceId,
+    faceImage: faceImage ?? null,
   });
 }
 
-async function closeOpenAttendance(openEntry: Attendance, now: Date) {
+async function closeOpenAttendance(openEntry: Attendance, now: Date, faceImage?: string) {
   const workingHoursMs = now.getTime() - (openEntry.entryTime?.getTime() || now.getTime());
   const workingHours = workingHoursMs / (1000 * 60 * 60);
 
@@ -438,6 +447,7 @@ async function closeOpenAttendance(openEntry: Attendance, now: Date) {
     exitTime: now,
     workingHours: Number(workingHours.toFixed(2)),
     verificationStatus: "EXIT",
+    faceImage: faceImage ?? (openEntry.faceImage || null),
   });
 }
 
@@ -449,6 +459,7 @@ async function resolveAttendanceDecision(
   matchConfidence: number,
   movementDirection?: MovementDirection,
   movementConfidence?: number,
+  faceImage?: string,
 ): Promise<ProcessedScanResult> {
   const openEntry = await storage.getOpenAttendance(employee.id, todayDate);
   const hasDirectionSignal = movementDirection !== undefined;
@@ -465,6 +476,7 @@ async function resolveAttendanceDecision(
           now,
           deviceId,
           "FAILED_DIRECTION",
+          faceImage,
         );
 
         return {
@@ -478,7 +490,7 @@ async function resolveAttendanceDecision(
         };
       }
 
-      const attendance = await createEntryAttendance(employee.id, todayDate, now, deviceId);
+      const attendance = await createEntryAttendance(employee.id, todayDate, now, deviceId, faceImage);
 
       return {
         success: true,
@@ -499,6 +511,7 @@ async function resolveAttendanceDecision(
         now,
         deviceId,
         "FAILED_DIRECTION",
+        faceImage,
       );
 
       return {
@@ -512,7 +525,7 @@ async function resolveAttendanceDecision(
       };
     }
 
-    const attendance = await closeOpenAttendance(openEntry, now);
+    const attendance = await closeOpenAttendance(openEntry, now, faceImage);
     if (!attendance) {
       return {
         success: false,
@@ -537,7 +550,7 @@ async function resolveAttendanceDecision(
   }
 
   if (openEntry) {
-    const attendance = await closeOpenAttendance(openEntry, now);
+    const attendance = await closeOpenAttendance(openEntry, now, faceImage);
     if (!attendance) {
       return {
         success: false,
@@ -557,7 +570,7 @@ async function resolveAttendanceDecision(
     };
   }
 
-  const attendance = await createEntryAttendance(employee.id, todayDate, now, deviceId);
+  const attendance = await createEntryAttendance(employee.id, todayDate, now, deviceId, faceImage);
 
   return {
     success: true,
@@ -715,6 +728,7 @@ async function processPythonRfidScan(args: {
     const detectedFaceLabel = verification.employee?.displayName
       ?? (verification.framesWithFace ? "Unknown Face" : undefined);
     const detectedFaceBox = verification.bestBox ?? null;
+    const faceImage = input.faceFrames?.[Math.floor((input.faceFrames.length - 1) / 2)] || input.faceFrames?.[0];
 
     if (!verification.verified || !verification.employee) {
       const attendance = await createFailureAttendance(
@@ -787,6 +801,7 @@ async function processPythonRfidScan(args: {
       matchConfidence,
       verification.movementDirection,
       verification.movementConfidence,
+      faceImage,
     );
 
     return logAndReturn({
@@ -796,9 +811,11 @@ async function processPythonRfidScan(args: {
       movementConfidence: verification.movementConfidence,
       detectedFaceLabel,
       detectedFaceBox,
+      faceImage,
     }, {
       verificationStatus: result.attendance?.verificationStatus ?? (result.success ? "ENTRY" : "FAILED_DIRECTION"),
       decision: result.action ?? (result.success ? "UNKNOWN" : "REJECTED"),
+      faceImage,
     });
   } catch (error) {
     const attendance = await createFailureAttendance(
@@ -848,6 +865,7 @@ async function processRfidScan(input: ProcessScanInput): Promise<ProcessedScanRe
       message: result.message,
       matchConfidence: result.matchConfidence,
       liveFaceProfile: options.liveFaceProfile,
+      faceImage: input.faceImage,
     });
 
     return result;
@@ -1249,6 +1267,7 @@ async function processRfidScan(input: ProcessScanInput): Promise<ProcessedScanRe
     matchConfidence,
     input.movementDirection,
     input.movementConfidence,
+    input.faceImage,
   );
 
   return logAndReturn({
@@ -1578,6 +1597,8 @@ export async function registerRoutes(
         phone: input.phone,
         email: input.email,
         rfidUid: input.rfidUid,
+        joiningDate: input.joiningDate ?? null,
+        workLocation: input.workLocation ?? null,
         isActive: input.isActive ?? true,
         faceDescriptor: buildPythonFaceDescriptorMeta({
           folderName: dataset.folderName,
@@ -1625,7 +1646,11 @@ export async function registerRoutes(
         return res.status(400).json(conflict);
       }
 
-      const employee = await storage.createEmployee(input);
+      const employee = await storage.createEmployee({
+        ...input,
+        joiningDate: input.joiningDate ?? null,
+        workLocation: input.workLocation ?? null,
+      });
       
       // Auto-trigger training if possible (later improvements will check if dataset exist)
       void retrainAndSyncPythonFaceModel();

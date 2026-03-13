@@ -89,6 +89,8 @@ export const employees = pgTable("employees", {
   email: text("email"),
   rfidUid: text("rfid_uid").notNull().unique(),
   faceDescriptor: jsonb("face_descriptor"), // Legacy descriptor array or structured face profile
+  joiningDate: text("joining_date"), // YYYY-MM-DD
+  workLocation: text("work_location"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -109,6 +111,7 @@ export const attendances = pgTable("attendances", {
   workingHours: doublePrecision("working_hours"),
   verificationStatus: text("verification_status").notNull(), // 'ENTRY', 'EXIT', 'FAILED_FACE', 'FAILED_DIRECTION', 'UNKNOWN_RFID'
   deviceId: text("device_id").notNull(),
+  faceImage: text("face_image"), // Base64 of the matched face frame
 });
 
 export const gateEvents = pgTable("gate_events", {
@@ -129,6 +132,7 @@ export const gateEvents = pgTable("gate_events", {
   faceQuality: doublePrecision("face_quality"),
   faceConsistency: doublePrecision("face_consistency"),
   faceCaptureMode: text("face_capture_mode"),
+  faceImage: text("face_image"), // Base64 of the matched face frame
 });
 
 export const employeesRelations = relations(employees, ({ many }) => ({

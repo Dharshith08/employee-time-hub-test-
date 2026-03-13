@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Pages
 import Dashboard from "./pages/dashboard";
@@ -32,7 +34,8 @@ function App() {
   } as React.CSSProperties;
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <ThemeProvider defaultTheme="light" storageKey="attendance-theme">
+      <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <SidebarProvider style={sidebarStyle}>
           <div className="flex h-screen w-full bg-background overflow-hidden">
@@ -40,8 +43,8 @@ function App() {
             <div className="flex flex-col flex-1 min-w-0">
               <header className="flex h-14 items-center gap-4 border-b border-border/40 bg-background/95 backdrop-blur px-6 shrink-0 shadow-sm z-10">
                 <SidebarTrigger className="-ml-2 hover-elevate active-elevate-2 p-2 rounded-md" />
-                <div className="w-full flex justify-end">
-                  {/* Future placement for user profile or theme toggle */}
+                <div className="w-full flex justify-end items-center gap-2">
+                  <ThemeToggle />
                 </div>
               </header>
               <main className="flex-1 overflow-auto bg-slate-50/50 dark:bg-transparent">
@@ -53,6 +56,7 @@ function App() {
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

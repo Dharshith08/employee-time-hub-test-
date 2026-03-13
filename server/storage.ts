@@ -417,6 +417,8 @@ export class MemoryStorage implements IStorage {
       email: employee.email ?? null,
       rfidUid: employee.rfidUid,
       faceDescriptor: employee.faceDescriptor ?? null,
+      joiningDate: employee.joiningDate ?? null,
+      workLocation: employee.workLocation ?? null,
       isActive: employee.isActive ?? true,
       createdAt: new Date(),
     };
@@ -440,6 +442,8 @@ export class MemoryStorage implements IStorage {
         updates.faceDescriptor === undefined
           ? existing.faceDescriptor
           : updates.faceDescriptor ?? null,
+      joiningDate: updates.joiningDate === undefined ? existing.joiningDate : updates.joiningDate ?? null,
+      workLocation: updates.workLocation === undefined ? existing.workLocation : updates.workLocation ?? null,
       isActive: updates.isActive ?? existing.isActive,
     };
 
@@ -621,6 +625,7 @@ export class MemoryStorage implements IStorage {
       workingHours: attendance.workingHours ?? null,
       verificationStatus: attendance.verificationStatus,
       deviceId: attendance.deviceId,
+      faceImage: attendance.faceImage ?? null,
     };
 
     this.attendanceStore.set(newAttendance.id, newAttendance);
@@ -646,6 +651,7 @@ export class MemoryStorage implements IStorage {
       faceQuality: event.faceQuality ?? null,
       faceConsistency: event.faceConsistency ?? null,
       faceCaptureMode: event.faceCaptureMode ?? null,
+      faceImage: event.faceImage ?? null,
     };
 
     this.gateEventStore.set(newGateEvent.id, newGateEvent);
@@ -665,6 +671,7 @@ export class MemoryStorage implements IStorage {
       exitTime: updates.exitTime === undefined ? existing.exitTime : updates.exitTime ?? null,
       workingHours:
         updates.workingHours === undefined ? existing.workingHours : updates.workingHours ?? null,
+      faceImage: updates.faceImage === undefined ? existing.faceImage : updates.faceImage ?? null,
     };
 
     this.attendanceStore.set(id, updated);

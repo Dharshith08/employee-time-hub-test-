@@ -11,7 +11,10 @@ import {
   Users,
   Cpu,
   RefreshCw,
+  Eye,
+  Camera,
 } from "lucide-react";
+import { EmployeeProfileDialog } from "@/components/employee-profile-dialog";
 import {
   Area,
   Bar,
@@ -193,6 +196,8 @@ export default function Dashboard() {
   const [datePreset, setDatePreset] = useState("today");
   const [dateFrom, setDateFrom] = useState(todayString);
   const [dateTo, setDateTo] = useState(todayString);
+  const [profileEmployee, setProfileEmployee] = useState<any | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { data: stats, isLoading, error, dataUpdatedAt: statsUpdatedAt } = useDashboardStats();
   const { data: employees } = useEmployees();
@@ -682,6 +687,7 @@ export default function Dashboard() {
                 <TableRow>
                   <TableHead className="pl-6">Date</TableHead>
                   <TableHead>Employee</TableHead>
+                  <TableHead>Snapshot</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Time Window</TableHead>
                   <TableHead>Total</TableHead>
@@ -712,7 +718,16 @@ export default function Dashboard() {
                     const exitTime = record.exitTime ? format(new Date(record.exitTime), "hh:mm a") : "-";
 
                     return (
-                      <TableRow key={record.id} className="hover:bg-muted/30">
+                      <TableRow 
+                        key={record.id} 
+                        className="hover:bg-muted/40 transition-sm cursor-pointer group"
+                        onClick={() => {
+                          if (record.employee) {
+                            setProfileEmployee(record.employee);
+                            setIsProfileOpen(true);
+                          }
+                        }}
+                      >
                         <TableCell className="pl-6 font-medium text-foreground">{record.date}</TableCell>
                         <TableCell>
                           {record.employee ? (
@@ -720,8 +735,26 @@ export default function Dashboard() {
                               <span className="font-semibold text-foreground">{record.employee.name}</span>
                               <span className="text-xs text-muted-foreground">{record.employee.employeeCode}</span>
                             </div>
-                          ) : (
+                           ) : (
                             <span className="text-muted-foreground italic">Unknown request</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {record.faceImage ? (
+                            <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-border/40 bg-muted shrink-0 group">
+                              <img 
+                                src={record.faceImage} 
+                                alt="Face" 
+                                className="h-full w-full object-cover transition-transform group-hover:scale-110" 
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Eye className="h-3 w-3 text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="h-10 w-10 flex items-center justify-center bg-muted/30 rounded-lg border border-dashed border-border/40">
+                              <Camera className="h-4 w-4 text-muted-foreground/40" />
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>
@@ -837,6 +870,12 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      <EmployeeProfileDialog 
+        employee={profileEmployee} 
+        open={isProfileOpen} 
+        onOpenChange={setIsProfileOpen} 
+      />
     </div>
   );
 }

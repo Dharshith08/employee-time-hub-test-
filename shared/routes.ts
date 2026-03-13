@@ -116,6 +116,8 @@ export const api = {
         phone: z.string().trim().optional(),
         email: z.string().trim().optional(),
         rfidUid: z.string().trim().min(1),
+        joiningDate: z.string().trim().optional(),
+        workLocation: z.string().trim().optional(),
         isActive: z.boolean().optional(),
         datasetPhotos: z.array(z.string()).min(12).max(100),
       }),
@@ -186,6 +188,7 @@ export const api = {
           movementConfidence: z.number().optional(),
           detectedFaceLabel: z.string().optional(),
           detectedFaceBox: faceBoxSchema.nullish(),
+          faceImage: z.string().optional(),
         }),
         400: errorSchemas.validation,
         404: errorSchemas.notFound

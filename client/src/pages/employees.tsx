@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
 import { useDeleteEmployee, useEmployees, usePythonEnrollEmployee } from "@/hooks/use-employees";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ import {
   X,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmployeeProfileDialog } from "@/components/employee-profile-dialog";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,6 +69,8 @@ const defaultFormValues = {
   phone: "",
   email: "",
   rfidUid: "",
+  joiningDate: format(new Date(), "yyyy-MM-dd"),
+  workLocation: "",
   isActive: true,
 };
 
@@ -79,6 +83,8 @@ const formSchema = insertEmployeeSchema
     rfidUid: z.string().trim().min(1, "RFID badge is required."),
     phone: z.string().trim().optional(),
     email: z.string().trim().optional(),
+    joiningDate: z.string().trim().optional(),
+    workLocation: z.string().trim().optional(),
   });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -206,6 +212,8 @@ export default function Employees() {
   const [rfidSourceDeviceId, setRfidSourceDeviceId] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [profileEmployee, setProfileEmployee] = useState<any | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -504,6 +512,32 @@ export default function Employees() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="joiningDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Joining Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="workLocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Work Location</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Main Office / Remote" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-5 border-t pt-5">
@@ -775,7 +809,16 @@ export default function Employees() {
                 employees?.map((employee) => {
                   const pythonStatus = getPythonFaceStatus(employee.faceDescriptor);
                   return (
-                    <TableRow key={employee.id} className="hover:bg-muted/30">
+                    <TableRow 
+                      key={employee.id} 
+                      className="hover:bg-muted/40 transition-sm cursor-pointer group"
+                      onClick={(e) => {
+                        // Don't open profile if clicking delete
+                        if ((e.target as HTMLElement).closest('button')) return;
+                        setProfileEmployee(employee);
+                        setIsProfileOpen(true);
+                      }}
+                    >
                       <TableCell className="pl-6 font-medium text-foreground">{employee.name}</TableCell>
                       <TableCell className="text-muted-foreground">{employee.employeeCode}</TableCell>
                       <TableCell>{employee.department}</TableCell>
@@ -792,19 +835,19 @@ export default function Employees() {
                               className={
                                 pythonStatus.status === "trained"
                                   ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                  : pythonStatus.status === "training"
-                                    ? "border-sky-300 bg-sky-50 text-sky-700"
-                                    : "border-amber-300 bg-amber-50 text-amber-700"
+                                : pythonStatus?.status === "training"
+                                  ? "border-sky-300 bg-sky-50 text-sky-700"
+                                  : "border-amber-300 bg-amber-50 text-amber-700"
                               }
                             >
-                              {pythonStatus.status === "trained"
+                              {pythonStatus?.status === "trained"
                                 ? "Python Trained"
-                                : pythonStatus.status === "training"
+                                : pythonStatus?.status === "training"
                                   ? "Training"
                                   : "Needs Re-Capture"}
                             </Badge>
                             <p className="text-[11px] text-muted-foreground">
-                              {pythonStatus.datasetSampleCount} dataset photos
+                              {pythonStatus?.datasetSampleCount} dataset photos
                             </p>
                           </div>
                         ) : (
@@ -847,6 +890,12 @@ export default function Employees() {
           </Table>
         </CardContent>
       </Card>
+
+      <EmployeeProfileDialog 
+        employee={profileEmployee} 
+        open={isProfileOpen} 
+        onOpenChange={setIsProfileOpen} 
+      />
     </div>
   );
 }
