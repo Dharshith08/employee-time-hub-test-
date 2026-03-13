@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+.env
+.env.local
+.local/
+__pycache__/
+*.pyc
+python-ml/.venv/
+python-ml/dataset/
+python-ml/output/
